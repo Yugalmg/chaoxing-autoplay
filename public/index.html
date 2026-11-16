@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>学习通代挂控制台</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e222b; --line:#2a2f3a;
+    --txt:#e6e9ef; --mute:#8b93a3; --accent:#4c8dff; --ok:#3ecf8e; --warn:#ffb020; --err:#ff5d5d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 20px 60px}
+  h1{font-size:19px;margin:0 0 4px;font-weight:600;letter-spacing:.3px}
+  .sub{color:var(--mute);font-size:12.5px;margin-bottom:20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .grow{flex:1}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+  .ok{background:var(--ok)} .err{background:var(--err)} .warn{background:var(--warn)} .mute{background:var(--mute)}
+  .k{color:var(--mute);font-size:12.5px}
+  .v{font-weight:600}
+  button{
+    background:var(--accent);color:#fff;border:0;border-radius:8px;padding:9px 16px;
+    font-size:13.5px;font-weight:600;cursor:pointer;transition:.15s;font-family:inherit
+  }
+  button:hover{filter:brightness(1.1)} button:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+  button.danger{background:var(--err)}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;color:var(--mute);font-weight:500;font-size:12.5px;padding:8px 10px;border-bottom:1px solid var(--line)}
+  td{padding:11px 10px;border-bottom:1px solid var(--line)}
+  tr.sel{background:rgba(76,141,255,.12)}
+  tbody tr{cursor:pointer;transition:.12s}
+  tbody tr:hover{background:rgba(255,255,255,.03)}
+  .bar{height:5px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:10px}
+  .bar>i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+  #log{
+    background:#0b0d11;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+    height:300px;overflow:auto;font:12.5px/1.65 ui-monospace,Consolas,monospace;white-space:pre-wrap;color:#b8c0cc
+  }
+  #log .t{color:#5a6373}
+  .pill{font-size:11.5px;padding:2px 8px;border-radius:20px;background:var(--panel2);color:var(--mute)}
+  .pill.on{background:rgba(62,207,142,.15);color:var(--ok)}
+  .pill.off{background:rgba(255,93,93,.15);color:var(--err)}
+  .hint{font-size:12px;color:var(--mute);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>学习通代挂控制台</h1>
+  <div class="sub">选择课程 → 自动刷视频。全程真实播放，不伪造进度。</div>
+
+  <!-- 登录态 -->
+  <div class="card">
+    <div class="row">
+      <div class="grow">
+        <div class="k">登录态</div>
+        <div class="v" id="loginText">检查中…</div>
+        <div class="hint" id="clientHint"></div>
+      </div>
+      <button class="ghost" id="btnRefresh">从客户端提取登录态</button>
+    </div>
+  </div>
+
+  <!-- 扫描 -->
+  <div class="card">
+    <div class="row">
+      <div class="grow">
+        <div class="k">课程扫描</div>
+        <div class="v" id="scanText">未扫描</div>
+        <div class="bar"><i id="scanBar"></i></div>
+      </div>
+      <button id="btnScan">扫描课程</button>
+    </div>
+  </div>
+
+  <!-- 课程表 -->
+  <div class="card" style="padding:8px 6px 6px">
+    <table>
+      <thead>
+        <tr><th style="width:34%">课程</th><th style="width:16%">视频进度</th><th style="width:16%">剩余时长</th><th style="width:34%">状态</th></tr>
+      </thead>
+      <tbody id="courseBody">
+        <tr><td colspan="4" style="color:var(--mute);text-align:center;padding:28px">先扫描课程</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 操作 -->
+  <div class="card">
+    <div class="row">
+      <div class="grow">
+        <div class="k">当前任务</div>
+        <div class="v" id="runText">空闲</div>
+      </div>
+      <button id="btnStart" disabled>开始刷课</button>
+      <button class="danger" id="btnStop" disabled>停止</button>
+    </div>
+  </div>
+
+  <!-- 日志 -->
+  <div class="card" style="padding:12px">
+    <div class="k" style="margin-bottom:8px">运行日志</div>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let courses = [];
+let selected = null;
+let scanning = false;
+
+function log(text, cls) {
+  const el = $('log');
+  const t = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  const div = document.createElement('div');
+  div.innerHTML = `<span class="t">[${t}]</span> ${text}`;
+  if (cls) div.style.color = 'var(--' + cls + ')';
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  while (el.children.length > 800) el.removeChild(el.firstChild);
+}
+
+function fmtDur(sec) {
+  if (!sec) return '0 分钟';
+  const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60);
+  return h ? `${h} 小时 ${m} 分` : `${m} 分钟`;
+}
+
+async function api(path, opt) {
+  const r = await fetch(path, opt);
+  return r.json();
+}
+
+async function refreshStatus() {
+  const s = await api('/api/status');
+  const l = s.login || {};
+  if (l.ok) {
+    $('loginText').innerHTML = `<span class="dot ok"></span>${l.nick || ('UID ' + l.uid)} <span class="pill on">有效</span>`;
+  } else {
+    $('loginText').innerHTML = `<span class="dot err"></span>${l.reason || '未登录'} <span class="pill off">需处理</span>`;
+  }
+  $('clientHint').textContent = s.client?.found
+    ? '检测到本机学习通客户端'
+    : '未检测到本机客户端（若在别的电脑，需那台机器装过并登录过）';
+
+  scanning = s.scanning;
+  $('btnScan').disabled = scanning;
+  if (scanning) $('scanText').textContent = '扫描中…';
+
+  if (s.cache) {
+    $('scanText').textContent = `上次扫描：${new Date(s.cache.at).toLocaleString('zh-CN')} · ${s.cache.count} 门课程`;
+  }
+
+  if (s.running) {
+    $('runText').innerHTML = `<span class="dot ok"></span>正在刷：${s.course}`;
+    $('btnStop').disabled = false;
+    $('btnStart').disabled = true;
+  } else {
+    $('runText').textContent = '空闲';
+    $('btnStop').disabled = true;
+    $('btnStart').disabled = !selected;
+  }
+
+  const c = await api('/api/courses');
+  if (c.courses?.length) renderCourses(c.courses);
+}
+
+function renderCourses(list) {
+  courses = list;
+  const tb = $('courseBody');
+  tb.innerHTML = '';
+  const sorted = [...list].sort((a, b) => b.pendSec - a.pendSec);
+  for (const c of sorted) {
+    const tr = document.createElement('tr');
+    const pct = c.total ? Math.round((c.passed / c.total) * 100) : 0;
+    const done = c.pending === 0;
+    tr.innerHTML = `
+      <td>${c.name}</td>
+      <td>${c.passed}/${c.total} <span class="k">(${pct}%)</span></td>
+      <td>${done ? '<span class="k">已完成</span>' : fmtDur(c.pendSec)}</td>
+      <td>${done ? '<span class="pill on">全部通过</span>' : (c.pending ? `<span class="pill">待刷 ${c.pending} 个</span>` : '<span class="pill">无视频</span>')}</td>
+    `;
+    if (!done && c.pending > 0) {
+      tr.onclick = () => {
+        [...tb.children].forEach(x => x.classList.remove('sel'));
+        tr.classList.add('sel');
+        selected = c;
+        $('btnStart').disabled = false;
+        $('runText').textContent = `已选择：${c.name}（预计 ${fmtDur(c.pendSec)}）`;
+      };
+    } else {
+      tr.style.opacity = .5;
+    }
+    tb.appendChild(tr);
+  }
+}
+
+// ── 事件 ──
+$('btnRefresh').onclick = async () => {
+  $('btnRefresh').disabled = true;
+  try {
+    const r = await api('/api/login/refresh', { method: 'POST' });
+    log(r.ok ? `登录态提取成功（${r.count} 条 cookie）` : `提取完成但校验失败：${r.reason || ''}`, r.ok ? 'ok' : 'err');
+    await refreshStatus();
+  } catch (e) { log('提取失败：' + e.message, 'err'); }
+  $('btnRefresh').disabled = false;
+};
+
+$('btnScan').onclick = async () => {
+  const r = await api('/api/scan', { method: 'POST' });
+  if (r.error) return log(r.error, 'err');
+  scanning = true;
+  $('btnScan').disabled = true;
+  $('scanText').textContent = '扫描中…';
+  log('开始扫描课程');
+};
+
+$('btnStart').onclick = async () => {
+  if (!selected) return;
+  const r = await api('/api/start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ course: selected.name, maxHours: 10 }),
+  });
+  if (r.error) return log(r.error, 'err');
+  log(`开始刷：${selected.name}`);
+  $('btnStart').disabled = true;
+  $('btnStop').disabled = false;
+};
+
+$('btnStop').onclick = async () => {
+  await api('/api/stop', { method: 'POST' });
+  log('已请求停止', 'warn');
+};
+
+// ── SSE ──
+const es = new EventSource('/api/stream');
+es.onmessage = (ev) => {
+  let m; try { m = JSON.parse(ev.data); } catch { return; }
+  if (m.type === 'log') log(m.payload);
+  if (m.type === 'progress') {
+    const p = m.payload;
+    $('scanText').textContent = p.text || '扫描中…';
+    if (p.total) $('scanBar').style.width = Math.round((p.current / p.total) * 100) + '%';
+    if (p.phase === 'done') { $('scanBar').style.width = '100%'; setTimeout(() => $('scanBar').style.width = '0', 1500); }
+  }
+  if (m.type === 'courses') { renderCourses(m.payload); log(`课程列表已更新（${m.payload.length} 门）`, 'ok'); }
+  if (m.type === 'scan_state') {
+    scanning = m.payload.scanning;
+    $('btnScan').disabled = scanning;
+    if (!scanning) refreshStatus();
+  }
+  if (m.type === 'run_state') {
+    if (m.payload.running) { $('runText').textContent = '正在刷：' + m.payload.course; $('btnStop').disabled = false; $('btnStart').disabled = true; }
+    else { $('runText').textContent = '空闲'; $('btnStop').disabled = true; refreshStatus(); }
+  }
+};
+es.onerror = () => log('日志流断开，刷新页面重连', 'warn');
+
+refreshStatus();
+</script>
+</body>
+</html>

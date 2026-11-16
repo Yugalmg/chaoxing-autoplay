@@ -1,0 +1,22 @@
+# ── 凭据与运行时数据（绝对不能提交）──
+state/
+log/
+runtime/
+build/
+
+# 本地配置含账号信息，只提交 config.example.json
+config.json
+
+# 临时/缓存
+node_modules/
+*.log
+.lock
+*.tmp
+*.zip
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

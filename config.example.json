@@ -1,0 +1,49 @@
+{
+  "_说明": "复制本文件为 config.json 后按需修改。config.json 已被 gitignore，不会进入仓库。",
+  "account": {
+    "uid": "",
+    "fid": "",
+    "uname": "",
+    "school": ""
+  },
+  "session": {
+    "cookies": "state/cookies.json",
+    "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "cookie_ttl_hours": 12
+  },
+  "mode": {
+    "dry_run": false,
+    "note": "dry_run=true 时只读本地状态、不发任何播放/上报请求"
+  },
+  "target": {
+    "courses": [],
+    "skip_courses": [],
+    "priority": []
+  },
+  "playback": {
+    "rate": 1.5,
+    "rate_max": 1.5,
+    "report_interval_sec": [45, 75],
+    "seek_guard": true,
+    "mute": true
+  },
+  "behavior": {
+    "mouse_jitter": true,
+    "jitter_interval_sec": [30, 90],
+    "answer_delay_sec": [4, 12],
+    "accuracy_target": 0.85,
+    "keep_focus": true
+  },
+  "schedule": {
+    "window": "22:00-07:00",
+    "concurrency": 1,
+    "max_hours_per_night": 8,
+    "retry_max": 3,
+    "retry_backoff_sec": [60, 180, 600]
+  },
+  "safety": {
+    "stop_on_captcha_fail": true,
+    "stop_on_face_capture": true,
+    "dead_course_after_errors": 5
+  }
+}
