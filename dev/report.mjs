@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const ROOT = 'D:\\Users\\Admin（无密码）\\Documents\\deepseek-harness\\default-workspace\\xxt';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const survey = JSON.parse(fs.readFileSync(path.join(ROOT, 'state', 'survey.json'), 'utf8'));
 const cfg = JSON.parse(fs.readFileSync(path.join(ROOT, 'config.json'), 'utf8'));
 const jobsFile = path.join(ROOT, 'state', 'jobs_index.json');

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const ROOT = 'D:\\Users\\Admin（无密码）\\Documents\\deepseek-harness\\default-workspace\\xxt';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(ROOT, 'state', 'courselist.html'), 'utf8');
 
 const order = [];

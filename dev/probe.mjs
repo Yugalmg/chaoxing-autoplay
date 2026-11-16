@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const ROOT = 'D:\\Users\\Admin（无密码）\\Documents\\deepseek-harness\\default-workspace\\xxt';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const cookies = JSON.parse(fs.readFileSync(path.join(ROOT, 'state', 'cookies.json'), 'utf8'));
 const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
 
